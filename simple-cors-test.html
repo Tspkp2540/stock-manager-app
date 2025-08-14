@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple CORS Test</title>
+</head>
+<body>
+    <h1>CORS Test Results</h1>
+    <div id="results"></div>
+    
+    <script>
+    const stockAPI = 'https://script.google.com/macros/s/AKfycbwSSJK8GTNP1D4VS-PF6XDZg4c_PDd4RQxj7hXE3Udxck_SwKWPPApuKORGFTF3wNdB/exec';
+    const authAPI = 'https://script.google.com/macros/s/AKfycbw7-F46lou4iiIg0_JOldcsLiUUib2XO_EZXiQ90U4shMdRz-VY1mkTYqno2rf5NU2w/exec';
+    
+    async function testCORS() {
+        const results = document.getElementById('results');
+        results.innerHTML = '<p>Testing CORS...</p>';
+        
+        // Test Stock API
+        try {
+            const response = await fetch(stockAPI);
+            results.innerHTML += '<p>✅ Stock API: Success - Status: ' + response.status + '</p>';
+            results.innerHTML += '<p>CORS Origin: ' + response.headers.get('access-control-allow-origin') + '</p>';
+        } catch (error) {
+            results.innerHTML += '<p>❌ Stock API Error: ' + error.message + '</p>';
+        }
+        
+        // Test Auth API  
+        try {
+            const response = await fetch(authAPI);
+            results.innerHTML += '<p>✅ Auth API: Success - Status: ' + response.status + '</p>';
+            results.innerHTML += '<p>CORS Origin: ' + response.headers.get('access-control-allow-origin') + '</p>';
+        } catch (error) {
+            results.innerHTML += '<p>❌ Auth API Error: ' + error.message + '</p>';
+        }
+    }
+    
+    testCORS();
+    </script>
+</body>
+</html>
