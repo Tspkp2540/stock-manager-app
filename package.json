@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "scripts": {
     "start": "ng serve",
-    "build": "ng build"
+    "build": "ng build",
+    "build:prod": "ng build --configuration=production"
   },
   "dependencies": {
     "@angular/animations": "18.2.13",
