@@ -1,0 +1,42 @@
+<div class="app-container">
+  <header class="app-header">
+    <h1>{{ title }}</h1>
+    
+    <!-- Session Info & Logout -->
+    <div *ngIf="isLoggedIn" class="session-info">
+      <!-- <div class="session-timer">
+        <span class="timer-icon">⏰</span>
+        <span>{{ getRemainingTime() }}</span>
+        <button class="extend-btn" (click)="extendSession()" title="ขยายเวลา 30 นาที">
+          +30min
+        </button>
+      </div> -->
+      <app-logout 
+        [currentUser]="currentUser" 
+        (logoutClick)="logout()">
+      </app-logout>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div *ngIf="currentView === 'login'">
+      <app-login (loginSuccess)="onLoginSuccess()"></app-login>
+    </div>
+
+    <div *ngIf="currentView === 'stock-list' && isLoggedIn">
+      <app-stock-list></app-stock-list>
+      <app-navigation 
+        [currentView]="currentView" 
+        (viewChange)="showView($event)">
+      </app-navigation>
+    </div>
+
+    <div *ngIf="currentView === 'add-item' && isLoggedIn">
+      <app-add-item></app-add-item>
+      <app-navigation 
+        [currentView]="currentView" 
+        (viewChange)="showView($event)">
+      </app-navigation>
+    </div>
+  </main>
+</div>

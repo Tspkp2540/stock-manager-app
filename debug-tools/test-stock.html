@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Google Sheets CSV</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Google Sheets CSV Test</h1>
+    <div id="loading">⏳ กำลังโหลดข้อมูล...</div>
+    <div id="error" style="display: none; color: red;"></div>
+    <div id="result"></div>
+
+    <script>
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9AEPnQSCWT3vSD_z8ESaURzi3m0lmX3SQWA_2UtomBZ00Dm8txgC3AD3ak_B60jE8F5INB70lyGUA/pub?output=csv&gid=0';
+        
+        fetch(sheetUrl)
+            .then(response => response.text())
+            .then(csvData => {
+                console.log('CSV Data received:', csvData);
+                document.getElementById('loading').style.display = 'none';
+                
+                const lines = csvData.split(/\r?\n/).filter(line => line.trim() !== '');
+                const headers = lines[0].split(',').map(h => h.trim());
+                const rows = lines.slice(1);
+                
+                console.log('Headers:', headers);
+                console.log('Data rows:', rows.length);
+                
+                let html = '<table><thead><tr>';
+                headers.forEach(header => {
+                    html += `<th>${header}</th>`;
+                });
+                html += '</tr></thead><tbody>';
+                
+                rows.forEach(row => {
+                    const values = row.split(',').map(v => v.trim());
+                    html += '<tr>';
+                    values.forEach(value => {
+                        html += `<td>${value}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+                document.getElementById('result').innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + error.message;
+            });
+    </script>
+</body>
+</html>

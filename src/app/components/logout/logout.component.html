@@ -1,0 +1,10 @@
+<div class="logout-container">
+  <span class="user-info">
+    <strong>ผู้ใช้:</strong> {{ currentUser?.username || 'ไม่ระบุ' }}
+    <span *ngIf="currentUser?.role">(<strong>{{ currentUser.role }}</strong>)</span>
+  </span>
+  <button class="logout-btn" (click)="onLogout()" title="ออกจากระบบ">
+    <span>🚪</span>
+    ออกจากระบบ
+  </button>
+</div>

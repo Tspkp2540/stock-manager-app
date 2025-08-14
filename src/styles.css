@@ -1,0 +1,45 @@
+/* Import Animate.css for SweetAlert2 animations */
+@import '~animate.css/animate.css';
+
+body {
+	font-family: Arial, sans-serif;
+	margin: 0;
+	padding: 0;
+	background: #f5f6fa;
+}
+
+h1 {
+	text-align: center;
+	color: #1976d2;
+	margin-top: 32px;
+	font-weight: 700;
+}
+
+.login-card {
+	max-width: 350px;
+	margin: 40px auto 24px auto;
+	padding: 24px 16px 16px 16px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+	border-radius: 12px;
+}
+
+.full-width {
+	width: 100%;
+}
+
+mat-toolbar {
+	border-radius: 12px 12px 0 0;
+	margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+	.login-card {
+		max-width: 95vw;
+		margin: 24px auto;
+		padding: 12px 4px 8px 4px;
+	}
+	h1 {
+		font-size: 1.5rem;
+		margin-top: 16px;
+	}
+}

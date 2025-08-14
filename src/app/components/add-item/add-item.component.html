@@ -1,0 +1,32 @@
+<div class="form-container">
+  <h2>เพิ่มสินค้า</h2>
+  
+  <!-- Connection Status -->
+  <div class="connection-status">
+    <div class="status-indicator" [class.online]="isUsingServer" [class.offline]="!isUsingServer">
+      <span class="status-icon">{{ isUsingServer ? '🌐' : '💾' }}</span>
+      <span class="status-text">
+        {{ isUsingServer ? 'บันทึกใน Google Sheets' : 'บันทึกออฟไลน์' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Permission Check -->
+  <div *ngIf="!canAddStock()" class="no-permission-message">
+    <div class="permission-icon">🔒</div>
+    <h3>ไม่มีสิทธิเพิ่มสินค้า</h3>
+    <p>เฉพาะ Admin เท่านั้นที่สามารถเพิ่มสินค้าได้</p>
+    <p class="current-role">สิทธิ์ปัจจุบัน: {{ getUserRole() === 'admin' ? 'Admin' : 'User' }}</p>
+  </div>
+
+  <!-- Add Form (Only for Admin) -->
+  <div *ngIf="canAddStock()" class="add-form">
+    <h3>กรุณากรอกข้อมูลสินค้าใหม่ด้านล่าง * :</h3>
+    <input [(ngModel)]="newItem.name" placeholder="ชื่อสินค้า">
+    <p>จำนวน * :</p>
+    <input [(ngModel)]="newItem.quantity" type="number" placeholder="จำนวน">
+    <p>ราคา * :</p>
+    <input [(ngModel)]="newItem.price" type="number" step="0.01" placeholder="ราคา (บาท)">
+    <button (click)="addItem()">เพิ่มสินค้า</button>
+  </div>
+</div>

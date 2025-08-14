@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Stock List Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        input { padding: 5px; margin-bottom: 10px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>Google Sheet Data</h1>
+    
+    <input type="text" id="search" placeholder="พิมพ์เพื่อค้นหา..." onkeyup="filterData()">
+    
+    <div class="debug">
+        <strong>Debug Info:</strong><br>
+        <span id="debug-info">กำลังโหลด...</span>
+    </div>
+    
+    <div id="loading">⏳ กำลังโหลดข้อมูล...</div>
+    <div id="error" style="display: none; color: red;"></div>
+    <div id="result"></div>
+
+    <script>
+        let allItems = [];
+        let headers = [];
+        
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9AEPnQSCWT3vSD_z8ESaURzi3m0lmX3SQWA_2UtomBZ00Dm8txgC3AD3ak_B60jE8F5INB70lyGUA/pub?output=csv&gid=0';
+        
+        function updateDebugInfo(info) {
+            document.getElementById('debug-info').innerHTML = info;
+        }
+        
+        function csvToArray(csv) {
+            const lines = csv.split(/\r?\n/).filter(line => line.trim() !== '');
+            headers = lines[0].split(',').map(h => h.trim());
+            const rows = lines.slice(1);
+
+            return rows.map(row => {
+                const values = row.split(',').map(v => v.trim());
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = values[index] || '';
+                });
+                return obj;
+            });
+        }
+        
+        function renderTable(items) {
+            if (items.length === 0) {
+                document.getElementById('result').innerHTML = '<div>❌ ไม่พบข้อมูล</div>';
+                return;
+            }
+            
+            let html = '<table><thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            items.forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    html += `<td>${row[header] || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('result').innerHTML = html;
+        }
+        
+        function filterData() {
+            const searchTerm = document.getElementById('search').value.toLowerCase();
+            const filteredItems = allItems.filter(item =>
+                Object.values(item).some(val =>
+                    val?.toString().toLowerCase().includes(searchTerm)
+                )
+            );
+            updateDebugInfo(`Filtered: ${filteredItems.length} จาก ${allItems.length} รายการ`);
+            renderTable(filteredItems);
+        }
+        
+        // โหลดข้อมูลจาก Google Sheets
+        fetch(sheetUrl)
+            .then(response => {
+                updateDebugInfo('ได้รับ response จาก Google Sheets');
+                return response.text();
+            })
+            .then(csvData => {
+                console.log('CSV Data received:', csvData.substring(0, 200) + '...');
+                document.getElementById('loading').style.display = 'none';
+                
+                allItems = csvToArray(csvData);
+                updateDebugInfo(`โหลดข้อมูลสำเร็จ: ${allItems.length} รายการ<br>Headers: ${headers.join(', ')}`);
+                renderTable(allItems);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + error.message;
+                
+                // ใช้ข้อมูลทดสอบแทน
+                updateDebugInfo('ใช้ข้อมูลทดสอบแทน');
+                headers = ['รหัสสินค้า', 'ชื่อสินค้า', 'จำนวน', 'ราคา'];
+                allItems = [
+                    { 'รหัสสินค้า': '001', 'ชื่อสินค้า': 'สินค้าทดสอบ 1', 'จำนวน': '10', 'ราคา': '100' },
+                    { 'รหัสสินค้า': '002', 'ชื่อสินค้า': 'สินค้าทดสอบ 2', 'จำนวน': '5', 'ราคา': '200' },
+                    { 'รหัสสินค้า': '003', 'ชื่อสินค้า': 'สินค้าทดสอบ 3', 'จำนวน': '8', 'ราคา': '150' }
+                ];
+                renderTable(allItems);
+            });
+    </script>
+</body>
+</html>

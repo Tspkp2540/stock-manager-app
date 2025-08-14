@@ -1,0 +1,25 @@
+<div class="navigation-buttons">
+  <button 
+    *ngIf="currentView === 'stock-list' && canAddStock()" 
+    class="nav-btn primary" 
+    (click)="navigateTo('add-item')">
+    <span>➕</span>
+    เพิ่มสินค้า
+  </button>
+  
+  <!-- Show message for users without add permission -->
+  <div 
+    *ngIf="currentView === 'stock-list' && !canAddStock()" 
+    class="no-add-permission">
+    <span class="permission-icon">🔒</span>
+    <span class="permission-text">เฉพาะ Admin เท่านั้นที่สามารถเพิ่มสินค้าได้</span>
+  </div>
+  
+  <button 
+    *ngIf="currentView === 'add-item'" 
+    class="nav-btn secondary" 
+    (click)="navigateTo('stock-list')">
+    <span>📋</span>
+    กลับไปรายการสินค้า
+  </button>
+</div>

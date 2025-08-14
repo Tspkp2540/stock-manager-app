@@ -1,0 +1,108 @@
+<h1>{{ title }}</h1>
+
+<!-- User Info -->
+<div class="user-info">
+  <span class="user-name">👤 {{ getUserName() }}</span>
+  <span class="user-role" [class.admin]="isAdmin()" [class.user]="!isAdmin()">
+    {{ getUserRole() === 'admin' ? '🔑 Admin' : '👁️ User' }}
+  </span>
+  <div class="debug-controls">
+    <button class="debug-btn" (click)="debugSession()">🔍 Debug</button>
+    <button class="clear-btn" (click)="clearSessions()">🧹 Clear</button>
+  </div>
+</div>
+
+<!-- Connection Status -->
+<div class="connection-status">
+  <div class="status-indicator" [class.online]="isUsingServer" [class.offline]="!isUsingServer">
+    <span class="status-icon">{{ isUsingServer ? '🌐' : '💾' }}</span>
+    <span class="status-text">
+      {{ isUsingServer ? 'เชื่อมต่อ Google Sheets' : 'ใช้ข้อมูลออฟไลน์' }}
+    </span>
+  </div>
+</div>
+
+<div class="full-width">
+  <div class="controls-container">
+    <div class="search-container">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (input)="filterItems()"
+        placeholder="🔍 พิมพ์เพื่อค้นหาสินค้า..."
+      />
+    </div>
+    <div class="reload-container">
+      <button 
+        class="reload-button"
+        (click)="reloadData()"
+        [disabled]="loading"
+        title="รีโหลดข้อมูล">
+        <span *ngIf="!loading">🔄</span>
+        <span *ngIf="loading">⏳</span>
+        {{ loading ? 'กำลังโหลด...' : 'รีโหลด' }}
+      </button>
+    </div>
+  </div>
+
+  <div>
+    <div *ngIf="loading" class="loading-message">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div>
+      กำลังโหลดข้อมูล...
+    </div>
+    
+    <div *ngIf="error" class="error-message">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+      {{ error }}
+    </div>
+
+    <div *ngIf="!loading && !error && filteredItems.length > 0" class="table-container">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>รหัสสินค้า</th>
+              <th>ชื่อสินค้า</th>
+              <th>จำนวน</th>
+              <th>ราคา (บาท)</th>
+              <th>การดำเนินการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of filteredItems">
+              <td>{{ item.id || '-' }}</td>
+              <td>{{ item.name }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ item.price ? (item.price | number:'1.2-2') : '0.00' }}</td>
+              <td class="action-column">
+                <button 
+                  *ngIf="canDeleteStock()"
+                  class="delete-btn"
+                  (click)="deleteItem(item)"
+                  title="ลบสินค้า">
+                  🗑️ ลบ
+                </button>
+                <span 
+                  *ngIf="!canDeleteStock()"
+                  class="no-permission"
+                  title="คุณไม่มีสิทธิลบสินค้า">
+                  -
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div *ngIf="!loading && !error && filteredItems.length === 0 && items.length === 0" class="no-data-message">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
+      ยังไม่มีสินค้าในระบบ
+    </div>
+
+    <div *ngIf="!loading && !error && filteredItems.length === 0 && items.length > 0" class="no-data-message">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+      ไม่พบสินค้าที่ค้นหา "{{ searchTerm }}"
+    </div>
+  </div>
+</div>

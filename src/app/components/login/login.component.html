@@ -1,0 +1,43 @@
+<div class="host-login">
+  <mat-card class="login-card">
+    <div class="login-toolbar">Login</div>
+    <div>
+      <mat-card-content>
+        <form>
+          <div class="form-field-container">
+            <mat-form-field appearance="fill" class="full-width">
+              <mat-label>Username</mat-label>
+              <input matInput [(ngModel)]="username" name="username" placeholder="กรุณากรอกชื่อผู้ใช้" [disabled]="loading"> 
+            </mat-form-field>
+          </div>
+          <div class="form-field-container">
+            <mat-form-field appearance="fill" class="full-width">
+              <mat-label>Password</mat-label>
+              <input matInput [(ngModel)]="password" name="password" type="password" placeholder="กรุณากรอกรหัสผ่าน" [disabled]="loading">
+            </mat-form-field>
+          </div>
+          
+          <!-- Loading UI - แสดงแทนปุ่ม -->
+          <div *ngIf="loading; else loginButton" class="loading-container">
+            <mat-spinner diameter="30"></mat-spinner>
+            <span class="loading-text">กำลังเข้าสู่ระบบ...</span>
+          </div>
+          
+          <!-- Login Button -->
+          <ng-template #loginButton>
+            <div class="login-button-container">
+              <button 
+                type="button" 
+                [disabled]="loading || !username || !password"
+                class="login-button" 
+                (click)="login()">
+                เข้าสู่ระบบ
+              </button>
+            </div>
+          </ng-template>
+
+        </form>
+      </mat-card-content>
+    </div>
+  </mat-card>
+</div>
