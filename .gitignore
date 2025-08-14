@@ -73,3 +73,6 @@ jspm_packages/
 
 # Angular cache
 .angular/
+
+# Local Netlify folder
+.netlify
