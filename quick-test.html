@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 4px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow: auto; }
+        .result { margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔧 Quick Auth API Test</h2>
+        
+        <button onclick="clearAndTestAdmin()">🧹 Clear Session & Test Admin Login</button>
+        <button onclick="testAPI()">🔍 Test API Connection</button>
+        
+        <div class="result">
+            <h3>Results:</h3>
+            <pre id="result"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbw7-F46lou4iiIg0_JOldcsLiUUib2XO_EZXiQ90U4shMdRz-VY1mkTYqno2rf5NU2w/exec';
+        
+        function log(text) {
+            const element = document.getElementById('result');
+            element.textContent += new Date().toLocaleTimeString() + ': ' + text + '\n';
+        }
+
+        async function clearAndTestAdmin() {
+            // Clear everything
+            localStorage.clear();
+            sessionStorage.clear();
+            document.getElementById('result').textContent = '';
+            
+            log('🧹 Cleared all sessions');
+            
+            // Test admin login
+            try {
+                log('🔐 Testing admin login...');
+                
+                const response = await fetch(API_URL + '?action=login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                log('📡 API Response: ' + JSON.stringify(data, null, 2));
+                
+                if (data.success && data.data && data.data.user) {
+                    log('✅ Login successful');
+                    log('👤 User: ' + data.data.user.username);
+                    log('🎭 Role: ' + data.data.user.role);
+                    log('🆔 ID: ' + data.data.user.id);
+                    
+                    // Store in localStorage like Angular does
+                    const userSession = {
+                        ...data.data.user,
+                        loginTime: Date.now()
+                    };
+                    localStorage.setItem('currentUser', JSON.stringify(userSession));
+                    log('💾 Stored in localStorage');
+                    
+                    // Check what we stored
+                    const stored = JSON.parse(localStorage.getItem('currentUser'));
+                    log('🔍 Stored data: ' + JSON.stringify(stored, null, 2));
+                    log('🎭 Stored role: ' + stored.role);
+                    
+                } else {
+                    log('❌ Login failed: ' + (data.message || 'Unknown error'));
+                    if (data.debug) {
+                        log('🐛 Debug info: ' + JSON.stringify(data.debug, null, 2));
+                    }
+                }
+                
+            } catch (error) {
+                log('💥 Error: ' + error.message);
+            }
+        }
+
+        async function testAPI() {
+            try {
+                log('🧪 Testing API connection...');
+                const response = await fetch(API_URL + '?action=test');
+                const data = await response.json();
+                log('✅ API connected: ' + data.data.message);
+            } catch (error) {
+                log('❌ API connection failed: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

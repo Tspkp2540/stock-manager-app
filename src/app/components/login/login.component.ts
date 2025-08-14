@@ -1,6 +1,7 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -17,7 +18,7 @@ export class LoginComponent {
   error: string | null = null;
 
   // Google Apps Script Web App URL for authentication
-  private readonly authApiUrl = 'https://script.google.com/macros/s/AKfycbw7-F46lou4iiIg0_JOldcsLiUUib2XO_EZXiQ90U4shMdRz-VY1mkTYqno2rf5NU2w/exec';
+  private readonly authApiUrl = environment.authApiUrl;
 
   constructor(
     private readonly http: HttpClient,

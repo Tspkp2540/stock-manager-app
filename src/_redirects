@@ -1,0 +1,7 @@
+# SPA routing for Angular app
+/*    /index.html   200
+
+# Optional: Cache static assets
+/assets/*  /assets/:splat  200  Cache-Control: max-age=31536000
+/*.js      /:splat         200  Cache-Control: max-age=31536000
+/*.css     /:splat         200  Cache-Control: max-age=31536000

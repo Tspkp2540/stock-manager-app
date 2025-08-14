@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API CORS Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 4px; cursor: pointer; }
+        .error { background: #dc3545; }
+        .success { background: #28a745; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow: auto; white-space: pre-wrap; }
+        .result { margin: 15px 0; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.loading { background: #cce7ff; color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 API CORS & Connectivity Test</h1>
+        <p>ทดสอบการเชื่อมต่อ Google Apps Script APIs</p>
+        
+        <div class="test-section">
+            <h3>Stock Management API</h3>
+            <button onclick="testStockAPI()">Test Stock API</button>
+            <button onclick="testAddItem()">Test Add Item</button>
+            <div id="stockResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Authentication API</h3>
+            <button onclick="testAuthAPI()">Test Auth API</button>
+            <button onclick="testLogin()">Test Login</button>
+            <div id="authResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>CORS Headers Check</h3>
+            <button onclick="checkCORS()">Check CORS Headers</button>
+            <div id="corsResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Deployment Environment</h3>
+            <div id="envInfo" class="result">
+                <div class="status loading">Loading environment info...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STOCK_API = 'https://script.google.com/macros/s/AKfycbwSSJK8GTNP1D4VS-PF6XDZg4c_PDd4RQxj7hXE3Udxck_SwKWPPApuKORGFTF3wNdB/exec';
+        const AUTH_API = 'https://script.google.com/macros/s/AKfycbw7-F46lou4iiIg0_JOldcsLiUUib2XO_EZXiQ90U4shMdRz-VY1mkTYqno2rf5NU2w/exec';
+
+        function setResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            const statusClass = type === 'error' ? 'error' : type === 'success' ? 'success' : 'loading';
+            element.innerHTML = `
+                <div class="status ${statusClass}">${type.toUpperCase()}: ${type === 'error' ? 'Failed' : type === 'success' ? 'Success' : 'Testing...'}</div>
+                <pre>${content}</pre>
+            `;
+        }
+
+        async function testStockAPI() {
+            setResult('stockResult', 'Testing Stock API connection...', 'loading');
+            
+            try {
+                const response = await fetch(STOCK_API + '?action=getItems', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                const data = await response.json();
+                
+                setResult('stockResult', JSON.stringify({
+                    status: response.status,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    data: data
+                }, null, 2), 'success');
+                
+            } catch (error) {
+                setResult('stockResult', `Error: ${error.message}\n\nCommon solutions:\n1. Check Google Apps Script is deployed as Web App\n2. Set "Who has access" to "Anyone"\n3. Re-deploy the script\n4. Check if the URL is correct`, 'error');
+            }
+        }
+
+        async function testAddItem() {
+            setResult('stockResult', 'Testing Add Item API...', 'loading');
+            
+            try {
+                const response = await fetch(STOCK_API + '?action=addItem', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'Test Item',
+                        quantity: 1,
+                        price: 100
+                    })
+                });
+                
+                const data = await response.json();
+                
+                setResult('stockResult', JSON.stringify({
+                    status: response.status,
+                    data: data
+                }, null, 2), data.success ? 'success' : 'error');
+                
+            } catch (error) {
+                setResult('stockResult', `Add Item Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAuthAPI() {
+            setResult('authResult', 'Testing Auth API connection...', 'loading');
+            
+            try {
+                const response = await fetch(AUTH_API + '?action=test', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                const data = await response.json();
+                
+                setResult('authResult', JSON.stringify({
+                    status: response.status,
+                    data: data
+                }, null, 2), 'success');
+                
+            } catch (error) {
+                setResult('authResult', `Auth API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            setResult('authResult', 'Testing Login...', 'loading');
+            
+            try {
+                const response = await fetch(AUTH_API + '?action=login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                setResult('authResult', JSON.stringify({
+                    status: response.status,
+                    loginSuccess: data.success,
+                    userRole: data.data?.user?.role,
+                    data: data
+                }, null, 2), data.success ? 'success' : 'error');
+                
+            } catch (error) {
+                setResult('authResult', `Login Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkCORS() {
+            setResult('corsResult', 'Checking CORS headers...', 'loading');
+            
+            try {
+                const response = await fetch(STOCK_API + '?action=test', {
+                    method: 'OPTIONS',
+                    mode: 'cors'
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                    'Content-Type': response.headers.get('Content-Type'),
+                };
+                
+                setResult('corsResult', JSON.stringify(corsHeaders, null, 2), 'success');
+                
+            } catch (error) {
+                setResult('corsResult', `CORS Check Error: ${error.message}\n\nThis might be normal - Google Apps Script handles CORS automatically.`, 'error');
+            }
+        }
+
+        function showEnvironmentInfo() {
+            const envInfo = {
+                userAgent: navigator.userAgent,
+                origin: location.origin,
+                protocol: location.protocol,
+                hostname: location.hostname,
+                isHTTPS: location.protocol === 'https:',
+                onLine: navigator.onLine,
+                cookiesEnabled: navigator.cookieEnabled,
+                language: navigator.language,
+                timestamp: new Date().toISOString()
+            };
+
+            document.getElementById('envInfo').innerHTML = `
+                <div class="status success">Environment Information</div>
+                <pre>${JSON.stringify(envInfo, null, 2)}</pre>
+            `;
+        }
+
+        // Auto-load environment info
+        window.addEventListener('load', showEnvironmentInfo);
+    </script>
+</body>
+</html>
