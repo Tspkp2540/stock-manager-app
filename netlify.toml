@@ -1,6 +1,6 @@
 [build]
   publish = "dist/stock-app"
-  command = "ng build --configuration=production"
+  command = "npm run build:netlify"
 
 [build.environment]
   NODE_VERSION = "18"

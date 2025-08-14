@@ -4,7 +4,8 @@
   "scripts": {
     "start": "ng serve",
     "build": "ng build",
-    "build:prod": "ng build --configuration=production"
+    "build:prod": "ng build --configuration=production",
+    "build:netlify": "npx ng build --configuration=production"
   },
   "dependencies": {
     "@angular/animations": "18.2.13",
@@ -26,7 +27,12 @@
     "zone.js": "~0.14.0"
   },
   "devDependencies": {
+    "@angular/cli": "^18.2.20",
     "@angular-devkit/build-angular": "^18.2.20",
     "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }
