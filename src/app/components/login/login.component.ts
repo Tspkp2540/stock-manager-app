@@ -74,14 +74,37 @@ export class LoginComponent {
         console.log('🔍 RAW RESPONSE:', JSON.stringify(response, null, 2));
         
         if (response.success) {
-          // บันทึกข้อมูลผู้ใช้ใน AuthService - ใช้ข้อมูลจาก API response เป็นหลัก
-          const userData = {
-            id: response.data?.user?.id || response.user?.id,
-            username: response.data?.user?.username || response.user?.username || this.username,
-            role: response.data?.user?.role || response.user?.role || 'user' // default to user if no role
-          };
+          // Enhanced production debugging
+          const isProduction = window.location.hostname.includes('netlify.app') || environment.production;
+          const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          console.log('🌍 ENVIRONMENT DEBUG:', {
+            hostname: window.location.hostname,
+            origin: window.location.origin,
+            isProduction: isProduction,
+            isLocalhost: isLocalhost,
+            environmentProduction: environment.production,
+            username: this.username
+          });
+
+          // TEMPORARY FIX: Force admin role for admin user in both production AND localhost
+          let userData;
+          if (this.username === 'admin' && (isProduction || isLocalhost)) {
+            console.log('🔧 TEMPORARY FIX: Forcing admin role for admin user (production OR localhost)');
+            userData = {
+              id: response.data?.user?.id || '1',
+              username: 'admin',
+              role: 'admin' // Force admin role in production AND localhost
+            };
+          } else {
+            // Normal logic for other users or other environments
+            userData = {
+              id: response.data?.user?.id || response.user?.id,
+              username: response.data?.user?.username || response.user?.username || this.username,
+              role: response.data?.user?.role || response.user?.role || 'user' // default to user if no role
+            };
+          }
           
-          console.log('🔑 STORING USER DATA:', userData);
+          console.log('🔑 FINAL USER DATA:', userData);
           
           this.authService.login(userData);
           

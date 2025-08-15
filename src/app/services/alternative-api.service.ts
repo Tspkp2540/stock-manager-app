@@ -67,7 +67,7 @@ export class AlternativeApiService {
    * Test CORS with different approaches
    */
   async testCorsApproaches(): Promise<any> {
-    const testResults = {
+    const testResults: any = {
       simpleGet: null,
       fetchMinimal: null,
       timestamp: new Date().toISOString()

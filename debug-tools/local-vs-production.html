@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local vs Production Debug</title>
+    <style>
+        body { font-family: 'Kanit', sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .local, .production { padding: 20px; border: 2px solid #ddd; border-radius: 8px; }
+        .local { border-color: #28a745; background: #f8fff9; }
+        .production { border-color: #dc3545; background: #fff8f8; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        .info { background: #cce7ff; border-color: #b3d7ff; color: #004085; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 11px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 12px; }
+        button:hover { background: #0056b3; }
+        .log { min-height: 150px; border: 1px solid #ddd; padding: 10px; margin-top: 10px; font-family: monospace; font-size: 10px; overflow-y: auto; max-height: 300px; background: #fafafa; }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status-success { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .status-warning { background: #ffc107; }
+        h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Local vs Production Debugging</h1>
+        
+        <div class="test-section info">
+            <h3>📋 Problem Description</h3>
+            <p><strong>ปัญหา:</strong> Local environment ทำงานถูกต้อง (admin role = "admin") แต่ Production environment ให้ผลผิด (admin role = "user")</p>
+            <p><strong>สาเหตุที่เป็นไปได้:</strong></p>
+            <ul>
+                <li>Environment variables ไม่ได้ถูก replace ใน production build</li>
+                <li>CORS behavior ต่างกันระหว่าง localhost และ production domain</li>
+                <li>Google Apps Script มี different behavior สำหรับ different origins</li>
+                <li>Cache issues ใน production</li>
+                <li>Build process ไม่ include environment files ถูกต้อง</li>
+            </ul>
+        </div>
+
+        <div class="comparison">
+            <div class="local">
+                <h3><span class="status-indicator status-success"></span>Local Environment</h3>
+                <button onclick="testLocalEnvironment()">Test Local APIs</button>
+                <button onclick="checkLocalEnvironment()">Check Environment</button>
+                <div id="local-log" class="log"></div>
+            </div>
+
+            <div class="production">
+                <h3><span class="status-indicator status-error"></span>Production Environment</h3>
+                <button onclick="testProductionEnvironment()">Test Production APIs</button>
+                <button onclick="checkProductionEnvironment()">Check Environment</button>
+                <div id="production-log" class="log"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Comprehensive Comparison</h3>
+            <button onclick="runFullComparison()">Run Full Comparison</button>
+            <button onclick="testOriginEffects()">Test Origin Effects</button>
+            <button onclick="analyzeBuildOutput()">Analyze Build Output</button>
+            <div id="comparison-log" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Solutions & Fixes</h3>
+            <div id="solutions-log" class="log">กรุณารัน tests ด้านบนเพื่อดู recommendations...</div>
+        </div>
+    </div>
+
+    <script>
+        const AUTH_API = 'https://script.google.com/macros/s/AKfycbw7-F46lou4iiIg0_JOldcsLiUUib2XO_EZXiQ90U4shMdRz-VY1mkTYqno2rf5NU2w/exec';
+        const STOCK_API = 'https://script.google.com/macros/s/AKfycbwSSJK8GTNP1D4VS-PF6XDZg4c_PDd4RQxj7hXE3Udxck_SwKWPPApuKORGFTF3wNdB/exec';
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const typeIcon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '📝';
+            element.innerHTML += `[${timestamp}] ${typeIcon} ${message}\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        function getCurrentEnvironmentInfo() {
+            return {
+                origin: window.location.origin,
+                hostname: window.location.hostname,
+                protocol: window.location.protocol,
+                port: window.location.port,
+                href: window.location.href,
+                userAgent: navigator.userAgent.substring(0, 100) + '...',
+                isLocalhost: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
+                isNetlify: window.location.hostname.includes('netlify.app'),
+                isFile: window.location.protocol === 'file:',
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        async function testEnvironmentAPIs(logElementId, environmentName) {
+            log(logElementId, `🌍 Testing ${environmentName} APIs...`);
+            
+            const envInfo = getCurrentEnvironmentInfo();
+            log(logElementId, `📍 Current Origin: ${envInfo.origin}`);
+            log(logElementId, `🌐 Is Localhost: ${envInfo.isLocalhost}`);
+            log(logElementId, `☁️ Is Netlify: ${envInfo.isNetlify}`);
+
+            // Test Auth API
+            try {
+                log(logElementId, '🔑 Testing Auth API login...');
+                
+                const params = new URLSearchParams();
+                params.append('action', 'login');
+                params.append('username', 'admin');
+                params.append('password', 'admin123');
+
+                const authResponse = await fetch(`${AUTH_API}?${params.toString()}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                log(logElementId, `Auth API Status: ${authResponse.status}`);
+                
+                const authText = await authResponse.text();
+                log(logElementId, `Auth Response Length: ${authText.length} chars`);
+
+                try {
+                    const authData = JSON.parse(authText);
+                    if (authData.success && authData.data?.user) {
+                        const role = authData.data.user.role;
+                        if (role === 'admin') {
+                            log(logElementId, `✅ Auth API: SUCCESS - Role = "${role}"`, 'success');
+                        } else {
+                            log(logElementId, `❌ Auth API: WRONG ROLE - Role = "${role}" (should be "admin")`, 'error');
+                        }
+                        
+                        // Log full response for analysis
+                        log(logElementId, `📋 Full Auth Response:`);
+                        log(logElementId, JSON.stringify(authData, null, 2));
+                    } else {
+                        log(logElementId, `❌ Auth API: Login failed - ${authData.message}`, 'error');
+                    }
+                } catch (parseError) {
+                    log(logElementId, `❌ Auth API: Parse error - ${parseError.message}`, 'error');
+                    log(logElementId, `Raw response: ${authText.substring(0, 200)}...`);
+                }
+
+            } catch (error) {
+                log(logElementId, `❌ Auth API Error: ${error.message}`, 'error');
+            }
+
+            // Test Stock API
+            try {
+                log(logElementId, '📦 Testing Stock API...');
+                
+                const stockResponse = await fetch(`${STOCK_API}?action=getItems`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                log(logElementId, `Stock API Status: ${stockResponse.status}`);
+                
+                if (stockResponse.ok) {
+                    log(logElementId, `✅ Stock API: SUCCESS`, 'success');
+                } else {
+                    log(logElementId, `❌ Stock API: FAILED`, 'error');
+                }
+
+            } catch (error) {
+                log(logElementId, `❌ Stock API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLocalEnvironment() {
+            clearLog('local-log');
+            await testEnvironmentAPIs('local-log', 'Local');
+        }
+
+        async function testProductionEnvironment() {
+            clearLog('production-log');
+            await testEnvironmentAPIs('production-log', 'Production');
+        }
+
+        function checkLocalEnvironment() {
+            const logId = 'local-log';
+            log(logId, '🔍 Local Environment Check:');
+            
+            const envInfo = getCurrentEnvironmentInfo();
+            Object.entries(envInfo).forEach(([key, value]) => {
+                log(logId, `  ${key}: ${value}`);
+            });
+        }
+
+        function checkProductionEnvironment() {
+            const logId = 'production-log';
+            log(logId, '🔍 Production Environment Check:');
+            
+            const envInfo = getCurrentEnvironmentInfo();
+            Object.entries(envInfo).forEach(([key, value]) => {
+                log(logId, `  ${key}: ${value}`);
+            });
+        }
+
+        async function runFullComparison() {
+            clearLog('comparison-log');
+            log('comparison-log', '🔍 Running Full Comparison...');
+            
+            const envInfo = getCurrentEnvironmentInfo();
+            log('comparison-log', `Current Environment: ${envInfo.isLocalhost ? 'Local' : envInfo.isNetlify ? 'Netlify' : 'Other'}`);
+            
+            // Test both with different origins simulation
+            log('comparison-log', '\n📊 COMPARISON ANALYSIS:');
+            
+            if (envInfo.isLocalhost) {
+                log('comparison-log', '✅ Running from localhost - this should work correctly');
+                log('comparison-log', '⚠️ Deploy to Netlify to see production behavior', 'warning');
+            } else if (envInfo.isNetlify) {
+                log('comparison-log', '🚀 Running from Netlify production');
+                log('comparison-log', '⚠️ This is where the role issue occurs', 'warning');
+            } else {
+                log('comparison-log', '❓ Running from unknown environment');
+            }
+
+            // Test API with origin headers
+            try {
+                log('comparison-log', '\n🔬 Testing API with current origin...');
+                
+                const response = await fetch(`${AUTH_API}?action=getUsers`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Origin': envInfo.origin
+                    }
+                });
+
+                const data = await response.text();
+                log('comparison-log', `Users API Response: ${response.status}`);
+                
+                try {
+                    const users = JSON.parse(data);
+                    if (users.success && users.data) {
+                        const adminUser = users.data.find(user => user.username === 'admin');
+                        if (adminUser) {
+                            log('comparison-log', `Admin user role in Sheets: "${adminUser.role}"`, adminUser.role === 'admin' ? 'success' : 'error');
+                        }
+                    }
+                } catch (e) {
+                    log('comparison-log', 'Failed to parse users response');
+                }
+
+            } catch (error) {
+                log('comparison-log', `API test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testOriginEffects() {
+            clearLog('comparison-log');
+            log('comparison-log', '🌐 Testing Origin Effects on Google Apps Script...');
+            
+            const origins = [
+                'http://localhost:4200',
+                'http://127.0.0.1:8080', 
+                'https://your-app.netlify.app',
+                window.location.origin
+            ];
+
+            for (const origin of origins) {
+                try {
+                    log('comparison-log', `\n🔬 Testing with Origin: ${origin}`);
+                    
+                    const response = await fetch(`${AUTH_API}?action=test`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    log('comparison-log', `  Status: ${response.status}`);
+                    log('comparison-log', `  CORS headers: ${response.headers.get('access-control-allow-origin')}`);
+
+                } catch (error) {
+                    log('comparison-log', `  Error: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function analyzeBuildOutput() {
+            clearLog('comparison-log');
+            log('comparison-log', '🏗️ Build Output Analysis...');
+            
+            log('comparison-log', '📋 Things to check in your build:');
+            log('comparison-log', '1. Environment file replacement is working');
+            log('comparison-log', '2. Production environment has correct API URLs');
+            log('comparison-log', '3. CORS interceptor is included in build');
+            log('comparison-log', '4. No development-only code in production');
+            
+            log('comparison-log', '\n🔍 Manual checks needed:');
+            log('comparison-log', '1. Open production app in browser');
+            log('comparison-log', '2. Check Network tab in DevTools');
+            log('comparison-log', '3. Look at login API request/response');
+            log('comparison-log', '4. Compare with localhost behavior');
+            
+            log('solutions-log', '💡 RECOMMENDED ACTIONS:');
+            log('solutions-log', '1. Build app locally: npm run build:netlify');
+            log('solutions-log', '2. Serve locally: cd dist/stock-app && python -m http.server');
+            log('solutions-log', '3. Test at http://localhost:8000 (not file://)');
+            log('solutions-log', '4. Compare behavior with production');
+            log('solutions-log', '5. If local build also fails → build issue');
+            log('solutions-log', '6. If local build works → CORS/origin issue');
+        }
+
+        // Auto-run environment check on load
+        window.onload = () => {
+            const envInfo = getCurrentEnvironmentInfo();
+            
+            if (envInfo.isLocalhost) {
+                checkLocalEnvironment();
+                log('solutions-log', '💡 You are on localhost. Deploy this tool to production and compare results.');
+            } else {
+                checkProductionEnvironment();  
+                log('solutions-log', '💡 You are on production. Run the same tests on localhost and compare.');
+            }
+        };
+    </script>
+</body>
+</html>
