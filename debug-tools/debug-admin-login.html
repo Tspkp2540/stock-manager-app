@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Admin Login Issue</title>
+    <style>
+        body { font-family: 'Kanit', sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        .info { background: #cce7ff; border-color: #b3d7ff; color: #004085; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; border-left: 4px solid #007bff; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .log { min-height: 100px; border: 1px solid #ddd; padding: 10px; margin-top: 10px; font-family: monospace; font-size: 12px; overflow-y: auto; max-height: 300px; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐛 Debug Admin Login Issue</h1>
+        
+        <div class="test-section info">
+            <h3>📋 Current Issue</h3>
+            <p><strong>ปัญหา:</strong> Admin user login แล้วได้ role เป็น 'user' แทนที่จะเป็น 'admin'</p>
+            <p><strong>สาเหตุที่เป็นไปได้:</strong></p>
+            <ul>
+                <li>Google Sheets ไม่มีข้อมูล admin user</li>
+                <li>API response structure ไม่ตรงกับที่ frontend คาดหวัง</li>
+                <li>Role mapping มีปัญหา</li>
+                <li>Session storage มีปัญหา</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Test 1: Check Google Sheets Users</h3>
+            <button onclick="checkUsersInSheet()">ตรวจสอบ Users ใน Google Sheets</button>
+            <div id="users-log" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔑 Test 2: Test Admin Login</h3>
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="admin-username" value="admin" />
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="admin-password" value="admin123" />
+            </div>
+            <button onclick="testAdminLogin()">ทดสอบ Admin Login</button>
+            <div id="admin-login-log" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📱 Test 3: Check Current Session</h3>
+            <button onclick="checkCurrentSession()">ตรวจสอบ Session ปัจจุบัน</button>
+            <button onclick="clearCurrentSession()">ล้าง Session</button>
+            <div id="session-log" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Fix Actions</h3>
+            <button onclick="createAdminUser()">สร้าง Admin User ใหม่</button>
+            <button onclick="fixUserRole()">แก้ไข Role ของ Admin</button>
+            <div id="fix-log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const AUTH_API = 'https://script.google.com/macros/s/AKfycbw7-F46lou4iiIg0_JOldcsLiUUib2XO_EZXiQ90U4shMdRz-VY1mkTYqno2rf5NU2w/exec';
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const typeIcon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '📝';
+            element.innerHTML += `[${timestamp}] ${typeIcon} ${message}\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        async function checkUsersInSheet() {
+            clearLog('users-log');
+            log('users-log', 'กำลังตรวจสอบ users ใน Google Sheets...');
+            
+            try {
+                const response = await fetch(`${AUTH_API}?action=getUsers`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.text();
+                log('users-log', `Raw response: ${result}`);
+
+                try {
+                    const data = JSON.parse(result);
+                    log('users-log', 'Parsed response:', 'success');
+                    log('users-log', JSON.stringify(data, null, 2));
+
+                    if (data.success && data.data) {
+                        log('users-log', `พบ users ทั้งหมด: ${data.data.length} คน`, 'success');
+                        data.data.forEach((user, index) => {
+                            log('users-log', `User ${index + 1}: ${user.username} (${user.role})`);
+                        });
+
+                        // Check for admin user specifically
+                        const adminUser = data.data.find(user => user.username === 'admin');
+                        if (adminUser) {
+                            log('users-log', `✅ Admin user พบแล้ว: Role = ${adminUser.role}`, 'success');
+                        } else {
+                            log('users-log', '❌ ไม่พบ Admin user', 'error');
+                        }
+                    } else {
+                        log('users-log', 'ไม่พบข้อมูล users', 'warning');
+                    }
+
+                } catch (parseError) {
+                    log('users-log', `Parse error: ${parseError.message}`, 'error');
+                }
+
+            } catch (error) {
+                log('users-log', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAdminLogin() {
+            clearLog('admin-login-log');
+            
+            const username = document.getElementById('admin-username').value;
+            const password = document.getElementById('admin-password').value;
+
+            log('admin-login-log', `กำลังทดสอบ login: ${username}`);
+
+            try {
+                const params = new URLSearchParams();
+                params.append('action', 'login');
+                params.append('username', username);
+                params.append('password', password);
+
+                const response = await fetch(`${AUTH_API}?${params.toString()}`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                log('admin-login-log', `Response status: ${response.status}`);
+
+                const result = await response.text();
+                log('admin-login-log', `Raw response: ${result}`);
+
+                try {
+                    const data = JSON.parse(result);
+                    log('admin-login-log', 'Parsed login response:');
+                    log('admin-login-log', JSON.stringify(data, null, 2));
+
+                    if (data.success) {
+                        log('admin-login-log', '✅ Login สำเร็จ!', 'success');
+                        
+                        // Check role in different locations
+                        const userRole = data.data?.user?.role || data.user?.role || 'unknown';
+                        const userUsername = data.data?.user?.username || data.user?.username || 'unknown';
+                        
+                        log('admin-login-log', `Username: ${userUsername}`);
+                        log('admin-login-log', `Role: ${userRole}`);
+
+                        if (userRole === 'admin') {
+                            log('admin-login-log', '✅ Role ถูกต้อง: admin', 'success');
+                        } else {
+                            log('admin-login-log', `❌ Role ไม่ถูกต้อง: ${userRole} (ควรจะเป็น admin)`, 'error');
+                        }
+
+                        // Show full data structure
+                        log('admin-login-log', 'Full data structure analysis:');
+                        log('admin-login-log', `data.data?.user?.role: ${data.data?.user?.role}`);
+                        log('admin-login-log', `data.user?.role: ${data.user?.role}`);
+                        log('admin-login-log', `data.role: ${data.role}`);
+
+                    } else {
+                        log('admin-login-log', `❌ Login ไม่สำเร็จ: ${data.message}`, 'error');
+                    }
+
+                } catch (parseError) {
+                    log('admin-login-log', `Parse error: ${parseError.message}`, 'error');
+                }
+
+            } catch (error) {
+                log('admin-login-log', `Network error: ${error.message}`, 'error');
+            }
+        }
+
+        function checkCurrentSession() {
+            clearLog('session-log');
+            
+            const sessionData = localStorage.getItem('currentUser');
+            
+            if (sessionData) {
+                log('session-log', '✅ พบ session ปัจจุบัน', 'success');
+                
+                try {
+                    const user = JSON.parse(sessionData);
+                    log('session-log', 'Session data:');
+                    log('session-log', JSON.stringify(user, null, 2));
+                    
+                    log('session-log', `Username: ${user.username}`);
+                    log('session-log', `Role: ${user.role}`);
+                    log('session-log', `Login time: ${new Date(user.loginTime).toLocaleString()}`);
+                    
+                    if (user.role === 'admin') {
+                        log('session-log', '✅ Session role ถูกต้อง', 'success');
+                    } else {
+                        log('session-log', `⚠️ Session role: ${user.role} (ไม่ใช่ admin)`, 'warning');
+                    }
+                    
+                } catch (error) {
+                    log('session-log', `Parse session error: ${error.message}`, 'error');
+                }
+            } else {
+                log('session-log', '❌ ไม่พบ session', 'error');
+            }
+        }
+
+        function clearCurrentSession() {
+            localStorage.removeItem('currentUser');
+            log('session-log', '✅ ล้าง session เรียบร้อย', 'success');
+        }
+
+        async function createAdminUser() {
+            clearLog('fix-log');
+            log('fix-log', '🔧 กำลังสร้าง Admin user ใหม่...');
+            
+            // This would require a separate API endpoint to create users
+            log('fix-log', '⚠️ การสร้าง user ใหม่ต้องทำผ่าน Google Sheets โดยตรง', 'warning');
+            log('fix-log', 'กรุณาตรวจสอบ Google Sheets และเพิ่ม admin user ด้วยตนเอง:', 'info');
+            log('fix-log', 'id: 1, username: admin, password: admin123, role: admin');
+        }
+
+        function fixUserRole() {
+            clearLog('fix-log');
+            log('fix-log', '🔧 แนะนำการแก้ไข role ใน Google Sheets:', 'info');
+            log('fix-log', '1. เปิด Google Sheets');
+            log('fix-log', '2. หา row ของ username "admin"');
+            log('fix-log', '3. ตรวจสอบ column "role" ว่าเป็น "admin" หรือไม่');
+            log('fix-log', '4. แก้ไขให้เป็น "admin" หากไม่ถูกต้อง');
+            log('fix-log', '5. Save และทดสอบ login ใหม่');
+        }
+
+        // Auto-run basic checks on page load
+        window.onload = () => {
+            log('session-log', 'Page loaded, ready for debugging');
+            checkCurrentSession();
+        };
+    </script>
+</body>
+</html>

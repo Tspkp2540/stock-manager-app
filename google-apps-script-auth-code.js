@@ -12,6 +12,8 @@ function doGet(e) {
       return testAuth();
     case 'getUsers':
       return getUsers();
+    case 'login':
+      return handleLoginGet(e);
     default:
       return createResponse(true, { message: 'Authentication API is ready' });
   }
@@ -268,9 +270,84 @@ function testAuth() {
     version: '1.0',
     timestamp: new Date().toISOString(),
     endpoints: {
-      login: 'POST with action=login',
+      login: 'POST with action=login or GET with action=login',
       register: 'POST with action=register',
       getUsers: 'GET with action=getUsers'
     }
   });
+}
+
+// Handle login via GET request (for CORS compatibility)
+function handleLoginGet(e) {
+  try {
+    const username = e.parameter.username;
+    const password = e.parameter.password;
+    
+    if (!username || !password) {
+      return createResponse(false, 'Username and password are required');
+    }
+    
+    const debugInfo = {
+      receivedUsername: username,
+      receivedPassword: password ? '***' : null,
+      timestamp: new Date().toISOString(),
+      method: 'GET'
+    };
+    
+    const sheet = getUserSheet();
+    const data = sheet.getDataRange().getValues();
+    
+    if (data.length <= 1) {
+      return createResponse(false, 'No users found in database');
+    }
+    
+    const headers = data[0];
+    const users = data.slice(1);
+    
+    debugInfo.totalUsers = users.length;
+    debugInfo.headers = headers;
+    
+    // Find user
+    for (let i = 0; i < users.length; i++) {
+      const row = users[i];
+      const userData = {};
+      headers.forEach((header, index) => {
+        userData[header] = row[index];
+      });
+      
+      const dbUsername = userData.username;
+      const dbPassword = userData.password;
+      const dbRole = userData.role;
+      const dbId = userData.id;
+      
+      debugInfo[`user_${i}`] = {
+        username: dbUsername,
+        role: dbRole,
+        passwordMatch: dbPassword === password
+      };
+      
+      if (dbUsername === username && dbPassword === password) {
+        debugInfo.loginResult = 'SUCCESS';
+        debugInfo.matchedUser = {
+          id: dbId,
+          username: dbUsername,
+          role: dbRole
+        };
+        
+        return createResponse(true, 'Login successful', {
+          user: {
+            id: dbId,
+            username: dbUsername,
+            role: dbRole
+          }
+        });
+      }
+    }
+    
+    debugInfo.loginResult = 'FAILED';
+    return createResponse(false, 'Invalid username or password', debugInfo);
+    
+  } catch (error) {
+    return createResponse(false, `Login error: ${error.message}`);
+  }
 }
