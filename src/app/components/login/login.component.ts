@@ -36,23 +36,15 @@ export class LoginComponent {
     this.loading = true;
     this.error = null;
     
-    // ส่งข้อมูลไป Google Apps Script
-    const loginData = {
-      username: this.username.trim(),
-      password: this.password.trim()
-    };
+    // สร้าง URL parameters สำหรับ Google Apps Script GET request
+    const params = new URLSearchParams();
+    params.append('action', 'login');
+    params.append('username', this.username.trim());
+    params.append('password', this.password.trim());
     
-    // Google Apps Script ต้องการ action parameter ใน URL และข้อมูลใน body
-    const apiUrl = `${this.authApiUrl}?action=login`;
+    const apiUrl = `${this.authApiUrl}?${params.toString()}`;
     
-    // เพิ่ม headers สำหรับ Google Apps Script
-    const httpOptions = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-    
-    this.http.post(apiUrl, loginData, httpOptions).subscribe({
+    this.http.get(apiUrl).subscribe({
       next: (response: any) => {
         this.loading = false;
         

@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, HTTP_INTERCEPTORS } from '@angular/common/http';
 
 import { FormsModule } from '@angular/forms';
 import { MaterialModule } from './material.module';
@@ -11,6 +11,7 @@ import { StockListComponent } from './components/stock-list/stock-list.component
 import { AddItemComponent } from './components/add-item/add-item.component';
 import { LogoutComponent } from './components/logout/logout.component';
 import { NavigationComponent } from './components/navigation/navigation.component';
+import { CorsInterceptor } from './interceptors/cors.interceptor';
 
 @NgModule({
   declarations: [
@@ -27,7 +28,12 @@ import { NavigationComponent } from './components/navigation/navigation.componen
     NavigationComponent
   ],
   providers: [
-    provideHttpClient()
+    provideHttpClient(),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: CorsInterceptor,
+      multi: true
+    }
   ],
   bootstrap: [AppComponent]
 })
