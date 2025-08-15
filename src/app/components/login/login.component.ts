@@ -48,16 +48,30 @@ export class LoginComponent {
       next: (response: any) => {
         this.loading = false;
         
-        // Debug log
-        console.log('🔍 LOGIN RESPONSE DEBUG:', {
+        // Enhanced Debug log
+        console.log('🔍 LOGIN RESPONSE FULL DEBUG:', {
           fullResponse: response,
+          responseKeys: Object.keys(response || {}),
           responseData: response.data,
           responseUser: response.user,
+          dataExists: !!response.data,
+          userExists: !!response.user,
+          dataUserExists: !!(response.data?.user),
           dataUserRole: response.data?.user?.role,
           userRole: response.user?.role,
           responseSuccess: response.success,
-          username: this.username
+          username: this.username,
+          // Check all possible role locations
+          possibleRoles: {
+            'response.data.user.role': response.data?.user?.role,
+            'response.user.role': response.user?.role,
+            'response.data.role': response.data?.role,
+            'response.role': response.role
+          }
         });
+        
+        // Log raw response for debugging
+        console.log('🔍 RAW RESPONSE:', JSON.stringify(response, null, 2));
         
         if (response.success) {
           // บันทึกข้อมูลผู้ใช้ใน AuthService - ใช้ข้อมูลจาก API response เป็นหลัก

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug API Response Structure</title>
+    <style>
+        body { font-family: 'Kanit', sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .log { min-height: 100px; border: 1px solid #ddd; padding: 10px; margin-top: 10px; font-family: monospace; font-size: 12px; overflow-y: auto; max-height: 400px; }
+        .highlight { background: #ffeb3b; padding: 2px 4px; border-radius: 3px; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug API Response Structure</h1>
+        
+        <div class="test-section error">
+            <h3>🚨 Current Problem</h3>
+            <p><strong>ปัญหา:</strong> Admin user login แล้วได้ role = "user" แทนที่จะเป็น "admin"</p>
+            <pre>{
+    "originalUser": {
+        "username": "admin",
+        "role": "user" ← ปัญหาตรงนี้!
+    },
+    "sessionToStore": {
+        "username": "admin", 
+        "role": "user",
+        "loginTime": 1755268625857
+    },
+    "userRole": "user",
+    "timestamp": "2025-08-15T14:37:05.857Z"
+}</pre>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Test Raw API Response</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="test-username" placeholder="Username" value="admin" />
+                <input type="password" id="test-password" placeholder="Password" value="admin123" />
+                <button onclick="testRawAPIResponse()">Test Raw API Response</button>
+            </div>
+            <div id="raw-api-log" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Check Google Sheets Data</h3>
+            <button onclick="checkGoogleSheetsUsers()">Check Users in Google Sheets</button>
+            <div id="sheets-log" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Fix Response Structure</h3>
+            <div id="fix-suggestions" class="warning">
+                <p><strong>Potential Solutions:</strong></p>
+                <ul>
+                    <li>Google Sheets has wrong data (role column is "user" instead of "admin")</li>
+                    <li>Google Apps Script is not reading role correctly</li>
+                    <li>API response structure is different than expected</li>
+                    <li>Frontend is parsing response incorrectly</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const AUTH_API = 'https://script.google.com/macros/s/AKfycbw7-F46lou4iiIg0_JOldcsLiUUib2XO_EZXiQ90U4shMdRz-VY1mkTYqno2rf5NU2w/exec';
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const typeIcon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '📝';
+            element.innerHTML += `[${timestamp}] ${typeIcon} ${message}\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        async function testRawAPIResponse() {
+            clearLog('raw-api-log');
+            
+            const username = document.getElementById('test-username').value;
+            const password = document.getElementById('test-password').value;
+            
+            log('raw-api-log', `🔍 Testing API with username: ${username}`);
+            
+            try {
+                const params = new URLSearchParams();
+                params.append('action', 'login');
+                params.append('username', username);
+                params.append('password', password);
+
+                const url = `${AUTH_API}?${params.toString()}`;
+                log('raw-api-log', `🌐 Request URL: ${url}`);
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                log('raw-api-log', `📡 Response Status: ${response.status} ${response.statusText}`);
+                log('raw-api-log', `📡 Response Headers:`);
+                for (const [key, value] of response.headers.entries()) {
+                    log('raw-api-log', `  ${key}: ${value}`);
+                }
+
+                const rawText = await response.text();
+                log('raw-api-log', `📄 Raw Response Text (${rawText.length} chars):`);
+                log('raw-api-log', rawText);
+
+                try {
+                    const parsedData = JSON.parse(rawText);
+                    log('raw-api-log', `✅ Successfully parsed JSON:`, 'success');
+                    
+                    // Deep analysis of response structure
+                    log('raw-api-log', `🔍 DETAILED ANALYSIS:`);
+                    log('raw-api-log', `  success: ${parsedData.success}`);
+                    log('raw-api-log', `  message: ${parsedData.message}`);
+                    
+                    if (parsedData.data) {
+                        log('raw-api-log', `  data exists: ${typeof parsedData.data}`);
+                        log('raw-api-log', `  data.user exists: ${parsedData.data.user ? 'YES' : 'NO'}`);
+                        
+                        if (parsedData.data.user) {
+                            log('raw-api-log', `  data.user.id: ${parsedData.data.user.id}`);
+                            log('raw-api-log', `  data.user.username: ${parsedData.data.user.username}`);
+                            log('raw-api-log', `  data.user.role: "${parsedData.data.user.role}" ← THIS IS THE KEY!`, parsedData.data.user.role === 'admin' ? 'success' : 'error');
+                        }
+                    }
+                    
+                    if (parsedData.user) {
+                        log('raw-api-log', `  user exists (top level): ${typeof parsedData.user}`);
+                        log('raw-api-log', `  user.role: "${parsedData.user.role}"`);
+                    }
+                    
+                    // Show complete structure
+                    log('raw-api-log', `\n🗂️ COMPLETE RESPONSE STRUCTURE:`);
+                    log('raw-api-log', JSON.stringify(parsedData, null, 2));
+
+                } catch (parseError) {
+                    log('raw-api-log', `❌ JSON Parse Error: ${parseError.message}`, 'error');
+                    log('raw-api-log', `This might be an HTML response instead of JSON`);
+                }
+
+            } catch (error) {
+                log('raw-api-log', `❌ Network Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkGoogleSheetsUsers() {
+            clearLog('sheets-log');
+            log('sheets-log', '📊 Checking Google Sheets users data...');
+            
+            try {
+                const response = await fetch(`${AUTH_API}?action=getUsers`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                const rawText = await response.text();
+                log('sheets-log', `Raw response: ${rawText}`);
+
+                try {
+                    const data = JSON.parse(rawText);
+                    
+                    if (data.success && data.data) {
+                        log('sheets-log', `✅ Found ${data.data.length} users in Google Sheets:`, 'success');
+                        
+                        data.data.forEach((user, index) => {
+                            const roleStatus = user.role === 'admin' ? '✅' : '❌';
+                            log('sheets-log', `${index + 1}. ${roleStatus} ID: ${user.id}, Username: "${user.username}", Role: "${user.role}"`);
+                            
+                            if (user.username === 'admin') {
+                                if (user.role === 'admin') {
+                                    log('sheets-log', `✅ Admin user has correct role: "${user.role}"`, 'success');
+                                } else {
+                                    log('sheets-log', `❌ PROBLEM FOUND: Admin user has wrong role: "${user.role}" (should be "admin")`, 'error');
+                                    log('sheets-log', `🔧 SOLUTION: Fix the role in Google Sheets to "admin"`);
+                                }
+                            }
+                        });
+                    } else {
+                        log('sheets-log', '❌ No users data returned', 'error');
+                    }
+                    
+                    log('sheets-log', '\n📋 Full response:');
+                    log('sheets-log', JSON.stringify(data, null, 2));
+                    
+                } catch (parseError) {
+                    log('sheets-log', `Parse error: ${parseError.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log('sheets-log', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run on page load
+        window.onload = () => {
+            log('raw-api-log', '🚀 Debug tool ready. Click buttons to test.');
+            
+            // Show suggested fixes
+            const fixElement = document.getElementById('fix-suggestions');
+            fixElement.innerHTML += `
+                <p><strong>📝 Action Plan:</strong></p>
+                <ol>
+                    <li>Click "Check Users in Google Sheets" to see actual data</li>
+                    <li>Click "Test Raw API Response" to see login response</li>
+                    <li>Compare the role values in both responses</li>
+                    <li>Fix the data source that has wrong role value</li>
+                </ol>
+            `;
+        };
+    </script>
+</body>
+</html>
